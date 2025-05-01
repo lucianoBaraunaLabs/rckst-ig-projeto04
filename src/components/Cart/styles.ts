@@ -144,5 +144,3 @@ export const FinalizationDetails = styled("section", {
     },
   },
 });
-
-// Parei aqui https://youtu.be/JmQEKgr7hxM?si=PFbse6BUKK5jqFDY&t=1601
