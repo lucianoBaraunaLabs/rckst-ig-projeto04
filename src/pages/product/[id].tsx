@@ -7,46 +7,21 @@ import Stripe from "stripe"
 import axios from "axios"
 import { useState } from "react"
 import Head from "next/head"
+import { useCart } from "@/hooks/useCart"
+import { IProduct } from "@/contexts/CartContext"
 
 interface ProductProps {
-  product: {
-    id: string,
-    name: string,
-    imageUrl: string,
-    price: string,
-    description: string,
-    defaultPriceId: string
-  }
+  product: IProduct
 }
 
 export default function Product({ product }: ProductProps) {
-  const [isCreatingCHeckoutSession,setIsCreatingCHeckoutSession]= useState(false)
   const { isFallback } = useRouter()
-
-
-  async function handleBuyProduct() {
-    try {
-      setIsCreatingCHeckoutSession(true)
-
-      const response = await axios.post('/api/checkout', {
-        priceId: product.defaultPriceId
-      })
-
-      const { checkoutUrl } = response.data
-
-      window.location.href = checkoutUrl
-
-    } catch (err) {
-      // Conectar com ferramenta de observalidade (Datadog / Sentry)
-      setIsCreatingCHeckoutSession(false)
-      alert('Falha ao redirecionar para checkout!')
-    }
-  }
+  const { addToCart, checkIfItemAlreadyExists } = useCart();
+  const itemAlreadyInCart = checkIfItemAlreadyExists(product?.id);
 
   if(isFallback) {
     return <p>Loading...</p>
   }
-
 
   return (
     <>
@@ -64,8 +39,10 @@ export default function Product({ product }: ProductProps) {
           <h1>{product.name}</h1>
           <span>R$ {product.price}</span>
           <p>{product.description}</p>
-          <button disabled={isCreatingCHeckoutSession} onClick={handleBuyProduct}>
-            Comprar agora
+          <button disabled={itemAlreadyInCart} onClick={() =>  addToCart(product)} >
+          {itemAlreadyInCart
+              ? "Produto já está no carrinho"
+              : "Colocar na sacola"}
           </button>
         </ProductDetails>
       </ProductContainer>
@@ -103,8 +80,9 @@ export const getStaticProps: GetStaticProps<any, {id: string}> = async ({params}
           currency: 'BRL'
         }).format(price.unit_amount / 100),
         description: product.description,
-        defaultPriceId: price.id
-      }
+        defaultPriceId: price.id,
+        numberPrice: price.unit_amount && price.unit_amount / 100,
+     }
     },
     revalidate: 60 * 60 * 1 // 1 hour
   }
